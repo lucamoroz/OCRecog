@@ -2,4 +2,5 @@
     <string name="app_name">OCRecog</string>
     <string name="takePictureButtonText">Take pic</string>
     <string name="photoFileName">lastPhoto.jpg</string>
+    <string name="savedPhotoPathKey">savedPhotoPathKey</string>
 </resources>
