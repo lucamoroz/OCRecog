@@ -5,6 +5,7 @@ import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.SharedPreferences;
 
+import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
@@ -16,17 +17,22 @@ import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.googlecode.tesseract.android.TessBaseAPI;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 import static android.app.PendingIntent.getActivity;
 
@@ -39,6 +45,10 @@ public class MainActivity extends AppCompatActivity {
     private Button takePictureButton;
     private TextView showTextView;
     private ImageView photoImageView;
+
+    private static final String TAG = MainActivity.class.getSimpleName();
+    public static final String TESS_DATA = "/Tessdata";
+    Bitmap bitmap;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,8 +70,14 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
         String pathToImageInternalStorage = sharedPref.getString(getString(R.string.savedPhotoPathKey), "");
 
+
         if(pathToImageInternalStorage != "")
-            loadImageFromStorage(pathToImageInternalStorage);
+            bitmap = loadImageFromStorage(pathToImageInternalStorage);
+            if(bitmap != null) {
+                photoImageView.setImageBitmap(bitmap);
+                showTextView.setText(getText(bitmap));
+            }
+
     }
 
 
@@ -110,7 +126,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
         if(requestCode == REQUEST_TAKE_PHOTO && resultCode == RESULT_OK) {
-            Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath);
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = false;
+            options.inSampleSize = 6;
+            Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath, options);
 
 
             Matrix matrix = new Matrix();
@@ -125,8 +144,9 @@ public class MainActivity extends AppCompatActivity {
             editor.putString(getString(R.string.savedPhotoPathKey), imagePathInternalStorage);
             editor.apply();
 
+            prepareTessData();
+            showTextView.setText(getText(bitmap));
 
-            
         }
 
     }
@@ -158,20 +178,76 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private void loadImageFromStorage(String path)
-    {
+    private Bitmap loadImageFromStorage(String path) {
 
         try {
             File f=new File(path, getString(R.string.photoFileName));
             Bitmap bitmap = BitmapFactory.decodeStream(new FileInputStream(f));
-            photoImageView.setImageBitmap(bitmap);
+            return bitmap;
         }
         catch (FileNotFoundException e)
         {
             Toast.makeText(getApplicationContext(), "No photo data found.", Toast.LENGTH_SHORT);
             e.printStackTrace();
         }
+        return null;
+    }
 
+    private void prepareTessData() {
+        AssetManager assetManager = getAssets();
+        String[] files = null;
+        try {
+            files = assetManager.list("");
+        } catch (IOException e) {
+            Log.e("tag", "Failed to get asset file list.", e);
+        }
+        for(String filename : files) {
+            InputStream in = null;
+            OutputStream out = null;
+            try {
+                in = assetManager.open(filename);
+                File outFile = new File(getExternalFilesDir(TESS_DATA), filename);
+                out = new FileOutputStream(outFile);
+                copyFile(in, out);
+                in.close();
+                in = null;
+                out.flush();
+                out.close();
+                out = null;
+            } catch(IOException e) {
+                Log.e("tag", "Failed to copy asset file: " + filename, e);
+            }
+        }
+    }
+    private void copyFile(InputStream in, OutputStream out) throws IOException {
+        byte[] buffer = new byte[1024];
+        int read;
+        while((read = in.read(buffer)) != -1){
+            out.write(buffer, 0, read);
+        }
+    }
+
+
+
+    private String getText(Bitmap bitmap){
+        TessBaseAPI tessBaseAPI = null;
+        try{
+            tessBaseAPI = new TessBaseAPI();
+        }catch (Exception e){
+            Log.e(TAG, e.getMessage());
+        }
+        String dataPath = getExternalFilesDir("/").getPath() + "/";
+        tessBaseAPI.init(dataPath, "ita");
+        tessBaseAPI.setImage(bitmap);
+        String retStr = "No result";
+        try{
+            retStr = tessBaseAPI.getUTF8Text();
+        }catch (Exception e){
+            Log.e(TAG, e.getMessage());
+        }
+        tessBaseAPI.end();
+
+        return retStr;
     }
 
 }
