@@ -132,9 +132,9 @@ public class MainActivity extends AppCompatActivity {
             Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath, options);
 
 
-            Matrix matrix = new Matrix();
+            /*Matrix matrix = new Matrix();
             matrix.postRotate(90); // anti-clockwise by 90 degrees
-            bitmap = Bitmap.createBitmap(bitmap , 0, 0, bitmap .getWidth(), bitmap .getHeight(), matrix, true);
+            bitmap = Bitmap.createBitmap(bitmap , 0, 0, bitmap .getWidth(), bitmap .getHeight(), matrix, true);*/
 
             photoImageView.setImageBitmap(bitmap);
 
