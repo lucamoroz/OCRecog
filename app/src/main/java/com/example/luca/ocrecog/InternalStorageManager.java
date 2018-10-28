@@ -5,6 +5,7 @@ import android.content.ContextWrapper;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -17,6 +18,13 @@ public class InternalStorageManager {
     private String fileName;
     private String path;
 
+    /**
+     *
+     * @param context application context
+     * @param dirName the directory where the file will be saved
+     * @param fileName  name of the file
+     *
+     */
     public InternalStorageManager(Context context, String dirName, String fileName) {
         this.dirName = dirName;
         this.context = context;
@@ -28,6 +36,13 @@ public class InternalStorageManager {
 
     }
 
+
+    /**
+     *
+     * @param bitmap image to save inside internal storage
+     *
+     * Modifies shared preferences to store the image's path
+     */
     public void saveToInternalStorage(Bitmap bitmap) {
         ContextWrapper cw = new ContextWrapper(context);
         File directory = cw.getDir(this.dirName, Context.MODE_PRIVATE);
@@ -70,6 +85,12 @@ public class InternalStorageManager {
         {
             e.printStackTrace();
         }
+
+
         return null;
     }
+
+
+
+
 }

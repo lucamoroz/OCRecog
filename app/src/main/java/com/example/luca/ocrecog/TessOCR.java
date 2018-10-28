@@ -1,7 +1,9 @@
 package com.example.luca.ocrecog;
 
 import android.graphics.Bitmap;
+import android.os.AsyncTask;
 import android.util.Log;
+import android.widget.TextView;
 
 import com.googlecode.tesseract.android.TessBaseAPI;
 
@@ -12,7 +14,7 @@ public class TessOCR implements OCRWrapper {
     private String mLanguage;
     private int minConfidence = 60;
 
-    TessBaseAPI tessBaseAPI;
+    private TessBaseAPI tessBaseAPI;
 
     public TessOCR(String dataPath, String language) {
         mDataPath = dataPath;
@@ -25,7 +27,16 @@ public class TessOCR implements OCRWrapper {
         mDataPath = dataPath;
     }
 
+
+    /**
+     *
+     * @param img The image in a Bitmap format
+     * @return  text recognized from the OCR, empty text if img is null
+     */
     public String getTextFromImg(Bitmap img) {
+        if(img == null)
+            return "";
+
         tessBaseAPI = new TessBaseAPI();
         tessBaseAPI.init(mDataPath, mLanguage);
         tessBaseAPI.setImage(img);
@@ -37,7 +48,17 @@ public class TessOCR implements OCRWrapper {
         tessBaseAPI.end();
         return text;
     }
+
+    /**
+     *
+     * @param img The image in a Bitmap format
+     * @return  text recognized from the OCR plus the mean confidence of the recognition, empty text if img is null
+     */
     public String getTextWithConfidenceFromImg(Bitmap img) {
+        if(img == null)
+            return "";
+
+
         tessBaseAPI = new TessBaseAPI();
         tessBaseAPI.init(mDataPath, mLanguage);
         tessBaseAPI.setImage(img);
@@ -51,8 +72,20 @@ public class TessOCR implements OCRWrapper {
         return text + "\n" + "Mean confidence: " + meanConfidence;
     }
 
+    /**
+     *
+     * @param minConfidence can be 0 to 100, min confidence to include a word inside the recognized text
+     */
     public void setMinConfidence(int minConfidence) {
         this.minConfidence = minConfidence;
+    }
+
+    /**
+     *
+     * @param language select which trained data the OCR will use
+     */
+    public void setLanguage(String language) {
+        this.mLanguage = language;
     }
 
     private String filterText(String text, int[] wordsConfidence, int minConfidence) {

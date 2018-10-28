@@ -1,6 +1,7 @@
 package com.example.luca.ocrecog;
 
 
+import android.app.ProgressDialog;
 import android.content.Intent;
 
 import android.content.res.AssetManager;
@@ -8,6 +9,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Environment;
 import android.provider.MediaStore;
 
@@ -76,12 +78,34 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+
+
+
+        AsyncLoad loadTask = new AsyncLoad(showTextView, "Loading data") {
+            @Override
+            protected String doInBackground(Void... voids) {
+                String recogText = "";
+                Bitmap bitmap = internalStorageManager.loadFromInternalStorage();
+                if(bitmap != null) {
+                    photoImageView.setImageBitmap(bitmap);
+                    recogText = tessOCR.getTextWithConfidenceFromImg(bitmap);
+                }
+                return recogText;
+            }
+        };
+        loadTask.execute();
+        /*
         Bitmap bitmap = internalStorageManager.loadFromInternalStorage();
         if(bitmap != null) {
             photoImageView.setImageBitmap(bitmap);
             showTextView.setText(tessOCR.getTextFromImg(bitmap));
         }
+          */
+
+
+
     }
+
 
 
     //Launch an intent to take a picture
@@ -108,7 +132,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
+    /**
+     *
+     * @return an image file from external directory
+     * @throws IOException
+     */
     private File createImageFile() throws IOException {
         // Create an image file name
         String imageFileName = "JPEG_";
@@ -130,6 +158,33 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
         if(requestCode == REQUEST_TAKE_PHOTO && resultCode == RESULT_OK) {
+
+            AsyncLoad loadTask = new AsyncLoad(showTextView, "Running OCR") {
+                @Override
+                protected String doInBackground(Void... voids) {
+
+                    String recogText = "";
+
+                    BitmapFactory.Options options = new BitmapFactory.Options();
+                    options.inJustDecodeBounds = false;
+                    options.inSampleSize = 6;
+                    Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath, options);
+
+                    //rotate image by 90 deg
+                    Matrix matrix = new Matrix();
+                    matrix.postRotate(90); // anti-clockwise by 90 degrees
+                    bitmap = Bitmap.createBitmap(bitmap , 0, 0, bitmap .getWidth(), bitmap .getHeight(), matrix, true);
+
+                    photoImageView.setImageBitmap(bitmap);
+                    internalStorageManager.saveToInternalStorage(bitmap);
+
+                    recogText = tessOCR.getTextWithConfidenceFromImg(bitmap);
+                    return recogText;
+                }
+            };
+            loadTask.execute();
+
+            /*
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = false;
             options.inSampleSize = 6;
@@ -144,6 +199,7 @@ public class MainActivity extends AppCompatActivity {
 
             showTextView.setText(tessOCR.getTextWithConfidenceFromImg(bitmap));
             internalStorageManager.saveToInternalStorage(bitmap);
+            */
         }
 
     }
@@ -171,12 +227,9 @@ public class MainActivity extends AppCompatActivity {
                 File outFile = new File(getExternalFilesDir(dir), filename);
                 out = new FileOutputStream(outFile);
 
-                //copyFile(in, out);
-                byte[] buffer = new byte[1024];
-                int read;
-                while((read = in.read(buffer)) != -1){
-                    out.write(buffer, 0, read);
-                }
+
+                copyFile(in, out);
+
 
                 in.close();
                 in = null;
@@ -190,6 +243,15 @@ public class MainActivity extends AppCompatActivity {
         String path = getExternalFilesDir("/").getPath() + "/";
         return path;
     }
+
+    /**
+     *
+     * @param in input
+     * @param out output
+     * @throws IOException
+     *
+     * Copy data from in to out
+     */
     private void copyFile(InputStream in, OutputStream out) throws IOException {
         byte[] buffer = new byte[1024];
         int read;
@@ -197,5 +259,40 @@ public class MainActivity extends AppCompatActivity {
             out.write(buffer, 0, read);
         }
     }
+
+
+    /**Execute a task and post the result on the TextView given on construction
+     *
+     */
+    private class AsyncLoad extends AsyncTask<Void, Void, String> {
+
+        private ProgressDialog progressDialog;
+        private TextView resultTextView;
+        private String progressMessage;
+
+        public AsyncLoad(TextView view, String progressMessage) {
+            this.resultTextView = view;
+            this.progressMessage = progressMessage;
+        }
+
+        @Override
+        protected String doInBackground(Void... voids) {
+            return "";
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            progressDialog.dismiss();
+            resultTextView.setText((s));
+        }
+
+        @Override
+        protected void onPreExecute() {
+            progressDialog = ProgressDialog.show(MainActivity.this,
+                    progressMessage,
+                    "");
+        }
+    }
+
 
 }
