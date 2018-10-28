@@ -43,7 +43,7 @@ public class InternalStorageManager {
      *
      * Modifies shared preferences to store the image's path
      */
-    public void saveToInternalStorage(Bitmap bitmap) {
+    public void saveBitmapToInternalStorage(Bitmap bitmap) {
         ContextWrapper cw = new ContextWrapper(context);
         File directory = cw.getDir(this.dirName, Context.MODE_PRIVATE);
         File file = new File(directory, fileName);
@@ -75,7 +75,7 @@ public class InternalStorageManager {
     }
 
 
-    public Bitmap loadFromInternalStorage() {
+    public Bitmap loadBitmapFromInternalStorage() {
         try {
             File f=new File(this.path, fileName);
             Bitmap bitmap = BitmapFactory.decodeStream(new FileInputStream(f));

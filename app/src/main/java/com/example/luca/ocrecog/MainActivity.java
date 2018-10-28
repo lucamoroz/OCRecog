@@ -3,8 +3,10 @@ package com.example.luca.ocrecog;
 
 import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.Intent;
 
+import android.content.SharedPreferences;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -52,8 +54,8 @@ public class MainActivity extends AppCompatActivity {
     TessOCR tessOCR;
     private String tessDataPath;
 
-    InternalStorageManager internalStorageManager;
-
+    InternalStorageManager internalStorageBitmapManager;
+    InternalStorageManager internalStorageTextManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
         tessDataPath = prepareTessData(TESS_DATA);
         tessOCR = new TessOCR(tessDataPath, TessOCR.ITA);
 
-        internalStorageManager = new InternalStorageManager(getApplicationContext(), "Photos",getString(R.string.photoFileName));
+        internalStorageBitmapManager = new InternalStorageManager(getApplicationContext(), "Photos",getString(R.string.photoFileName));
 
         photoImageView = (ImageView) findViewById(R.id.photoImageView);
         showTextView = (TextView) findViewById(R.id.showTextView);
@@ -80,9 +82,14 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
-        final Bitmap bitmap = internalStorageManager.loadFromInternalStorage();
+        final Bitmap bitmap = internalStorageBitmapManager.loadBitmapFromInternalStorage();
         if(bitmap != null) {
             photoImageView.setImageBitmap(bitmap);
+
+            SharedPreferences sharedPref = getApplicationContext().getSharedPreferences("manager", Context.MODE_PRIVATE);
+            showTextView.setText(sharedPref.getString("recogText", ""));
+
+            /*
             @SuppressLint("StaticFieldLeak") AsyncLoad loadTask = new AsyncLoad(showTextView, "Running OCR") {
                 @Override
                 protected String doInBackground(Bitmap... bitmaps) {
@@ -93,6 +100,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             };
             loadTask.execute(bitmap);
+            */
         }
 
 
@@ -176,7 +184,7 @@ public class MainActivity extends AppCompatActivity {
                 protected String doInBackground(Bitmap... bitmaps) {
 
                     String recogText = "";
-                    internalStorageManager.saveToInternalStorage(bitmaps[0]);
+                    internalStorageBitmapManager.saveBitmapToInternalStorage(bitmaps[0]);
 
                     recogText = tessOCR.getTextWithConfidenceFromImg(bitmaps[0]);
                     return recogText;
@@ -198,7 +206,7 @@ public class MainActivity extends AppCompatActivity {
             photoImageView.setImageBitmap(bitmap);
 
             showTextView.setText(tessOCR.getTextWithConfidenceFromImg(bitmap));
-            internalStorageManager.saveToInternalStorage(bitmap);
+            internalStorageBitmapManager.saveBitmapToInternalStorage(bitmap);
             */
         }
 
@@ -284,6 +292,14 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(String s) {
             progressDialog.dismiss();
             resultTextView.setText((s));
+
+
+            SharedPreferences sharedPref = getApplicationContext().getSharedPreferences("manager", Context.MODE_PRIVATE);
+            SharedPreferences.Editor editor = sharedPref.edit();
+            editor.putString("recogText", s);
+            editor.apply();
+
+
         }
 
         @Override
