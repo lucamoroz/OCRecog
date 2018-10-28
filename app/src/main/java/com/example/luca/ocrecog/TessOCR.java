@@ -13,6 +13,7 @@ public class TessOCR implements OCRWrapper {
     private String mDataPath;
     private String mLanguage;
     private int minConfidence = 60;
+    private String charWhitelist = "abcdefghijklmnopqrstuvwxyz1234567890',.?;/ ";
 
     private TessBaseAPI tessBaseAPI;
 
@@ -39,6 +40,9 @@ public class TessOCR implements OCRWrapper {
 
         tessBaseAPI = new TessBaseAPI();
         tessBaseAPI.init(mDataPath, mLanguage);
+
+        tessBaseAPI.setVariable(TessBaseAPI.VAR_CHAR_WHITELIST, charWhitelist);
+
         tessBaseAPI.setImage(img);
         String text = tessBaseAPI.getUTF8Text();
 
@@ -61,6 +65,9 @@ public class TessOCR implements OCRWrapper {
 
         tessBaseAPI = new TessBaseAPI();
         tessBaseAPI.init(mDataPath, mLanguage);
+
+        tessBaseAPI.setVariable(TessBaseAPI.VAR_CHAR_WHITELIST, charWhitelist);
+
         tessBaseAPI.setImage(img);
         String text = tessBaseAPI.getUTF8Text();
 
@@ -69,7 +76,7 @@ public class TessOCR implements OCRWrapper {
 
         int meanConfidence = tessBaseAPI.meanConfidence();
         tessBaseAPI.end();
-        return text + "\n" + "Mean confidence: " + meanConfidence;
+        return text + "\n\n" + "Mean confidence: " + meanConfidence;
     }
 
     /**
@@ -87,6 +94,13 @@ public class TessOCR implements OCRWrapper {
     public void setLanguage(String language) {
         this.mLanguage = language;
     }
+
+
+    /**
+     *
+     * @param charWhitelist change the whitelist used by the OCR
+     */
+    public void setCharWhitelist(String charWhitelist) { this.charWhitelist = charWhitelist; }
 
     private String filterText(String text, int[] wordsConfidence, int minConfidence) {
         String[] words = text.split(" ");

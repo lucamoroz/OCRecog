@@ -1,6 +1,7 @@
 package com.example.luca.ocrecog;
 
 
+import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.Intent;
 
@@ -79,28 +80,23 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
-
-
-        AsyncLoad loadTask = new AsyncLoad(showTextView, "Loading data") {
-            @Override
-            protected String doInBackground(Void... voids) {
-                String recogText = "";
-                Bitmap bitmap = internalStorageManager.loadFromInternalStorage();
-                if(bitmap != null) {
-                    photoImageView.setImageBitmap(bitmap);
-                    recogText = tessOCR.getTextWithConfidenceFromImg(bitmap);
-                }
-                return recogText;
-            }
-        };
-        loadTask.execute();
-        /*
-        Bitmap bitmap = internalStorageManager.loadFromInternalStorage();
+        final Bitmap bitmap = internalStorageManager.loadFromInternalStorage();
         if(bitmap != null) {
             photoImageView.setImageBitmap(bitmap);
-            showTextView.setText(tessOCR.getTextFromImg(bitmap));
+            @SuppressLint("StaticFieldLeak") AsyncLoad loadTask = new AsyncLoad(showTextView, "Running OCR") {
+                @Override
+                protected String doInBackground(Bitmap... bitmaps) {
+                    String recogText = "";
+
+                    recogText = tessOCR.getTextWithConfidenceFromImg(bitmaps[0]);
+                    return recogText;
+                }
+            };
+            loadTask.execute(bitmap);
         }
-          */
+
+
+
 
 
 
@@ -159,30 +155,34 @@ public class MainActivity extends AppCompatActivity {
 
         if(requestCode == REQUEST_TAKE_PHOTO && resultCode == RESULT_OK) {
 
-            AsyncLoad loadTask = new AsyncLoad(showTextView, "Running OCR") {
+
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = false;
+
+            //reduce quality for better performance
+            options.inSampleSize = 2;
+
+            Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath, options);
+
+            //rotate image by 90 deg
+            Matrix matrix = new Matrix();
+            matrix.postRotate(90); // anti-clockwise by 90 degrees
+            bitmap = Bitmap.createBitmap(bitmap , 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+
+            photoImageView.setImageBitmap(bitmap);
+
+            @SuppressLint("StaticFieldLeak") AsyncLoad loadTask = new AsyncLoad(showTextView, "Running OCR") {
                 @Override
-                protected String doInBackground(Void... voids) {
+                protected String doInBackground(Bitmap... bitmaps) {
 
                     String recogText = "";
+                    internalStorageManager.saveToInternalStorage(bitmaps[0]);
 
-                    BitmapFactory.Options options = new BitmapFactory.Options();
-                    options.inJustDecodeBounds = false;
-                    options.inSampleSize = 6;
-                    Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath, options);
-
-                    //rotate image by 90 deg
-                    Matrix matrix = new Matrix();
-                    matrix.postRotate(90); // anti-clockwise by 90 degrees
-                    bitmap = Bitmap.createBitmap(bitmap , 0, 0, bitmap .getWidth(), bitmap .getHeight(), matrix, true);
-
-                    photoImageView.setImageBitmap(bitmap);
-                    internalStorageManager.saveToInternalStorage(bitmap);
-
-                    recogText = tessOCR.getTextWithConfidenceFromImg(bitmap);
+                    recogText = tessOCR.getTextWithConfidenceFromImg(bitmaps[0]);
                     return recogText;
                 }
             };
-            loadTask.execute();
+            loadTask.execute(bitmap);
 
             /*
             BitmapFactory.Options options = new BitmapFactory.Options();
@@ -264,7 +264,7 @@ public class MainActivity extends AppCompatActivity {
     /**Execute a task and post the result on the TextView given on construction
      *
      */
-    private class AsyncLoad extends AsyncTask<Void, Void, String> {
+    private class AsyncLoad extends AsyncTask<Bitmap, Void, String> {
 
         private ProgressDialog progressDialog;
         private TextView resultTextView;
@@ -276,7 +276,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        protected String doInBackground(Void... voids) {
+        protected String doInBackground(Bitmap... bitmaps) {
             return "";
         }
 
